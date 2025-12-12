@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Processing History - Invoice Processing System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold text-primary">
+                    <i class="fas fa-history me-3"></i>
+                    Processing History
+                </h2>
+                <p class="text-muted mb-0">View all processed invoices and download results</p>
+            </div>
+            <div>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    Process New Invoice
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm card-hover">
+                    <div class="card-body text-center">
+                        <i class="fas fa-file-invoice fa-2x text-primary mb-3"></i>
+                        <h4 class="fw-bold">{{ results|length }}</h4>
+                        <small class="text-muted">Total Processed</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm card-hover">
+                    <div class="card-body text-center">
+                        <i class="fas fa-rupee-sign fa-2x text-success mb-3"></i>
+                        <h4 class="fw-bold">₹{{ "{:,.0f}".format(results|sum(attribute='total_amount')) if results else 0 }}</h4>
+                        <small class="text-muted">Total Amount</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm card-hover">
+                    <div class="card-body text-center">
+                        <i class="fas fa-building fa-2x text-info mb-3"></i>
+                        <h4 class="fw-bold">{{ results|map(attribute='vendor_name')|unique|list|length if results else 0 }}</h4>
+                        <small class="text-muted">Unique Vendors</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm card-hover">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar fa-2x text-warning mb-3"></i>
+                        <h4 class="fw-bold">{{ results|length if results and results[0].timestamp.split()[0] == moment().format('YYYY-MM-DD') else 0 }}</h4>
+                        <small class="text-muted">Today's Count</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="card border-0 shadow-lg">
+            <div class="card-header gradient-bg text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    Invoice Processing History
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if results %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th><i class="fas fa-clock me-1"></i>Timestamp</th>
+                                <th><i class="fas fa-hashtag me-1"></i>Invoice #</th>
+                                <th><i class="fas fa-building me-1"></i>Vendor</th>
+                                <th><i class="fas fa-rupee-sign me-1"></i>Amount</th>
+                                <th><i class="fas fa-download me-1"></i>Files</th>
+                                <th><i class="fas fa-cogs me-1"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold">{{ result.timestamp.split()[1] }}</span>
+                                        <small class="text-muted">{{ result.timestamp.split()[0] }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ result.invoice_number }}</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold">{{ result.vendor_name[:30] }}{% if result.vendor_name|length > 30 %}...{% endif %}</span>
+                                        <small class="text-muted" title="{{ result.vendor_name }}">{{ result.vendor_name }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">₹{{ "{:,.0f}".format(result.total_amount) }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="/download/{{ result.json_file }}" class="btn btn-outline-primary btn-sm" title="Download JSON">
+                                            <i class="fas fa-file-code"></i>
+                                        </a>
+                                        <a href="/download/{{ result.xml_file }}" class="btn btn-outline-success btn-sm" title="Download XML">
+                                            <i class="fas fa-file-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline-info btn-sm" onclick="viewDetails('{{ result.json_file }}')" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">No Processing History</h4>
+                    <p class="text-muted mb-4">You haven't processed any invoices yet.</p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        Process Your First Invoice
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-warning mt-4">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Warning:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header gradient-bg text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    Invoice Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function viewDetails(jsonFile) {
+        // Fetch and display invoice details
+        fetch(`/download/${jsonFile}`)
+            .then(response => response.json())
+            .then(data => {
+                const modalBody = document.getElementById('modalBody');
+                
+                modalBody.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Invoice Number:</strong></td><td>${data.invoice_number || 'N/A'}</td></tr>
+                                <tr><td><strong>Date:</strong></td><td>${data.date || 'N/A'}</td></tr>
+                                <tr><td><strong>Vendor Name:</strong></td><td>${data.vendor_name || 'N/A'}</td></tr>
+                                <tr><td><strong>Total Amount:</strong></td><td class="text-success fw-bold">${formatCurrency(data.total_amount || 0)}</td></tr>
+                                <tr><td><strong>Tax Amount:</strong></td><td>${formatCurrency(data.tax_amount || 0)}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-map-marker-alt me-2"></i>Vendor Address</h6>
+                            <p class="text-muted small">${data.vendor_address || 'Not available'}</p>
+                        </div>
+                    </div>
+                    
+                    ${data.line_items && data.line_items.length > 0 ? `
+                    <div class="mt-4">
+                        <h6><i class="fas fa-list me-2"></i>Line Items (${data.line_items.length})</h6>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Description</th>
+                                        <th>Qty</th>
+                                        <th>Rate</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.line_items.map(item => `
+                                        <tr>
+                                            <td>${item.description || 'N/A'}</td>
+                                            <td>${item.quantity || 0}</td>
+                                            <td>${formatCurrency(item.rate || 0)}</td>
+                                            <td class="fw-bold">${formatCurrency(item.amount || 0)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    ` : '<div class="alert alert-info mt-4">No line items found</div>'}
+                `;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+                modal.show();
+            })
+            .catch(error => {
+                showAlert('danger', `❌ Failed to load details: ${error.message}`);
+            });
+    }
+    
+    // Auto-refresh every 30 seconds if on current day
+    setInterval(() => {
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        
+        // Check if we have any results from today
+        const tableRows = document.querySelectorAll('tbody tr');
+        let hasToday = false;
+        
+        tableRows.forEach(row => {
+            const dateCell = row.querySelector('td small');
+            if (dateCell && dateCell.textContent.includes(today)) {
+                hasToday = true;
+            }
+        });
+        
+        if (hasToday) {
+            // Silently refresh the page
+            location.reload();
+        }
+    }, 30000);
+</script>
+{% endblock %}

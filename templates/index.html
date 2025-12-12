@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice Processing System - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold text-primary">
+                <i class="fas fa-magic me-3"></i>
+                AI Invoice Processing
+            </h1>
+            <p class="lead text-muted">
+                Upload invoice images or PDFs and automatically create vouchers in TallyPrime
+            </p>
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm card-hover">
+                        <div class="card-body text-center">
+                            <i class="fas fa-upload fa-2x text-primary mb-3"></i>
+                            <h6>Upload Invoice</h6>
+                            <small class="text-muted">PDF, JPG, PNG supported</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm card-hover">
+                        <div class="card-body text-center">
+                            <i class="fas fa-robot fa-2x text-success mb-3"></i>
+                            <h6>AI Processing</h6>
+                            <small class="text-muted">LLAMA Maverick extraction</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm card-hover">
+                        <div class="card-body text-center">
+                            <i class="fas fa-check-circle fa-2x text-info mb-3"></i>
+                            <h6>TallyPrime</h6>
+                            <small class="text-muted">Automatic voucher creation</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="card border-0 shadow-lg">
+            <div class="card-header gradient-bg text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cloud-upload-alt me-2"></i>
+                    Upload Invoice
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Drag & Drop Invoice Here</h5>
+                        <p class="text-muted mb-3">or click to browse files</p>
+                        <input type="file" id="fileInput" name="file" accept=".pdf,.jpg,.jpeg,.png" multiple style="display: none;">
+                        <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open me-2"></i>
+                            Choose Files
+                        </button>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                Supported formats: PDF, JPG, PNG • Max size: 10MB per file • Multiple files supported
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div id="fileInfo" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-files me-2"></i>
+                            <span id="fileCount"></span>
+                            <div id="fileList" class="mt-2"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg" id="processBtn" disabled>
+                            <i class="fas fa-cogs me-2"></i>
+                            Process Invoice
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-container mt-4">
+            <div class="card border-0 shadow">
+                <div class="card-body">
+                    <h6 class="mb-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        Processing Invoice...
+                    </h6>
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="progressText" class="text-muted">
+                        Initializing...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="result-container mt-4">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header" id="resultHeader">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Processing Results
+                    </h5>
+                </div>
+                <div class="card-body" id="resultBody">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/fixed_script.js"></script>
+{% endblock %}

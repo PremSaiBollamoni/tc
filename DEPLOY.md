@@ -1,0 +1,43 @@
+# Deployment Guide
+
+## ⚠️ IMPORTANT: Netlify Won't Work
+Netlify only hosts static websites (HTML/CSS/JS). Your app is a Flask Python backend that needs a server.
+
+## ✅ Recommended: Deploy on Vercel (FREE)
+
+1. **Sign up**: Go to [vercel.com](https://vercel.com) and sign up with GitHub
+2. **Connect GitHub**: Link your GitHub account
+3. **Push code**: Push this project to a GitHub repository
+4. **Import**: Click "New Project" → Import from GitHub
+5. **Configure**: 
+   - Framework: Other
+   - Build Command: (leave empty)
+   - Output Directory: (leave empty)
+6. **Environment Variables**: Add your API token:
+   - Key: `DEEPINFRA_TOKEN`
+   - Value: `sGnexJYRzOzcMH3x2Rzg9CusBH11poeO`
+7. **Deploy**: Click Deploy!
+
+## Alternative: Railway (Also FREE)
+
+1. Go to [railway.app](https://railway.app)
+2. Sign up with GitHub
+3. Click "Deploy from GitHub repo"
+4. Select your repository
+5. Add environment variable: `DEEPINFRA_TOKEN`
+6. Deploy!
+
+## Files Ready for Deployment:
+- ✅ `vercel.json` - Vercel configuration
+- ✅ `railway.json` - Railway configuration  
+- ✅ `Procfile` - Process file
+- ✅ `requirements.txt` - Python dependencies
+- ✅ `runtime.txt` - Python version
+- ✅ `wsgi.py` - WSGI entry point
+
+## Your Live URL:
+After deployment, you'll get a URL like:
+- Vercel: `https://your-app-name.vercel.app`
+- Railway: `https://your-app-name.up.railway.app`
+
+Send this URL to your TL! 🚀
