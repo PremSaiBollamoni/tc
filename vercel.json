@@ -13,7 +13,6 @@
     }
   ],
   "env": {
-    "DEEPINFRA_TOKEN": "@deepinfra_token",
     "TALLY_HOST": "localhost",
     "TALLY_PORT": "9000"
   }

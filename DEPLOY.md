@@ -13,9 +13,10 @@ Netlify only hosts static websites (HTML/CSS/JS). Your app is a Flask Python bac
    - Framework: Other
    - Build Command: (leave empty)
    - Output Directory: (leave empty)
-6. **Environment Variables**: Add your API token:
-   - Key: `DEEPINFRA_TOKEN`
+6. **Environment Variables**: In Vercel dashboard, go to Settings → Environment Variables and add:
+   - Name: `DEEPINFRA_TOKEN`
    - Value: `sGnexJYRzOzcMH3x2Rzg9CusBH11poeO`
+   - Environment: Production, Preview, Development (select all)
 7. **Deploy**: Click Deploy!
 
 ## Alternative: Railway (Also FREE)
