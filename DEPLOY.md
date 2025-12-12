@@ -42,4 +42,16 @@ After deployment, you'll get a URL like:
 - Vercel: `https://your-app-name.vercel.app`
 - Railway: `https://your-app-name.up.railway.app`
 
+## 🎯 How It Works in Cloud:
+1. **AI Processing**: ✅ Works perfectly - processes invoices with LLAMA Maverick
+2. **TallyPrime Connection**: ⚠️ Skipped (cloud can't connect to local TallyPrime)
+3. **XML Generation**: ✅ Creates downloadable XML files for manual import
+4. **File Downloads**: ✅ JSON and XML files available for download
+
+## 📋 For Your TL Demo:
+1. Upload an invoice (PDF/image)
+2. Show AI extraction results
+3. Download the generated XML
+4. Explain: "XML can be imported to local TallyPrime"
+
 Send this URL to your TL! 🚀

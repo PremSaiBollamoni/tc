@@ -86,40 +86,74 @@ def process_invoice_api(file_path):
         try:
             import requests
             base_url = f"http://{config['tally_host']}:{config['tally_port']}"
-            response = requests.get(base_url, timeout=5)
             
-            if response.status_code == 200:
-                processing_steps['tally_connection']['status'] = 'success'
-                processing_steps['tally_connection']['message'] = f'Connected to TallyPrime on {config["tally_host"]}:{config["tally_port"]}'
+            # Check if we're in cloud environment
+            if config['tally_host'] == 'localhost':
+                processing_steps['tally_connection']['status'] = 'skipped'
+                processing_steps['tally_connection']['message'] = 'Skipped - Cloud deployment cannot connect to local TallyPrime'
+            else:
+                response = requests.get(base_url, timeout=5)
+                
+                if response.status_code == 200:
+                    processing_steps['tally_connection']['status'] = 'success'
+                    processing_steps['tally_connection']['message'] = f'Connected to TallyPrime on {config["tally_host"]}:{config["tally_port"]}'
+                else:
+                    processing_steps['tally_connection']['status'] = 'failed'
+                    processing_steps['tally_connection']['message'] = f'TallyPrime not responding (HTTP {response.status_code})'
+        except Exception as e:
+            if config['tally_host'] == 'localhost':
+                processing_steps['tally_connection']['status'] = 'skipped'
+                processing_steps['tally_connection']['message'] = 'Skipped - Cloud deployment cannot connect to local TallyPrime'
             else:
                 processing_steps['tally_connection']['status'] = 'failed'
-                processing_steps['tally_connection']['message'] = f'TallyPrime not responding (HTTP {response.status_code})'
-        except Exception as e:
-            processing_steps['tally_connection']['status'] = 'failed'
-            processing_steps['tally_connection']['message'] = f'Cannot connect to TallyPrime: {str(e)}'
+                processing_steps['tally_connection']['message'] = f'Cannot connect to TallyPrime: {str(e)}'
         
         # Step 3: TallyPrime Integration
-        processing_steps['ledger_creation']['status'] = 'processing'
-        processing_steps['voucher_creation']['status'] = 'processing'
-        
-        tally = CompleteTallyIntegration()
-        result = tally.import_complete_invoice(merged_json)
-        
-        # Update ledger creation status
-        processing_steps['ledger_creation']['status'] = 'success'
-        processing_steps['ledger_creation']['message'] = 'Ledgers created successfully'
-        processing_steps['ledger_creation']['data'] = {
-            'vendor_ledger': merged_json.get('vendor_name'),
-            'item_ledgers': [item.get('description') for item in merged_json.get('line_items', [])]
-        }
-        
-        # Update voucher creation status
-        if result['success']:
-            processing_steps['voucher_creation']['status'] = 'success'
-            processing_steps['voucher_creation']['message'] = 'Voucher created successfully in TallyPrime'
+        if config['tally_host'] == 'localhost':
+            # Skip TallyPrime integration in cloud deployment
+            processing_steps['ledger_creation']['status'] = 'skipped'
+            processing_steps['ledger_creation']['message'] = 'Skipped - Cloud deployment (download XML to import locally)'
+            
+            processing_steps['voucher_creation']['status'] = 'skipped'
+            processing_steps['voucher_creation']['message'] = 'Skipped - Cloud deployment (download XML to import locally)'
+            
+            # Generate XML for download
+            try:
+                tally = CompleteTallyIntegration()
+                xml_content = tally.create_voucher(merged_json)
+                
+                # Save XML for download
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                xml_file = os.path.join(RESULTS_FOLDER, f"voucher_{timestamp}.xml")
+                with open(xml_file, 'w', encoding='utf-8') as f:
+                    f.write(xml_content)
+                
+                result = {'success': True, 'xml_file': xml_file, 'error': None}
+            except Exception as e:
+                result = {'success': False, 'xml_file': None, 'error': str(e)}
         else:
-            processing_steps['voucher_creation']['status'] = 'failed'
-            processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {result.get("error", "Unknown error")}'
+            # Try actual TallyPrime integration for non-localhost
+            processing_steps['ledger_creation']['status'] = 'processing'
+            processing_steps['voucher_creation']['status'] = 'processing'
+            
+            tally = CompleteTallyIntegration()
+            result = tally.import_complete_invoice(merged_json)
+            
+            # Update ledger creation status
+            processing_steps['ledger_creation']['status'] = 'success'
+            processing_steps['ledger_creation']['message'] = 'Ledgers created successfully'
+            processing_steps['ledger_creation']['data'] = {
+                'vendor_ledger': merged_json.get('vendor_name'),
+                'item_ledgers': [item.get('description') for item in merged_json.get('line_items', [])]
+            }
+            
+            # Update voucher creation status
+            if result['success']:
+                processing_steps['voucher_creation']['status'] = 'success'
+                processing_steps['voucher_creation']['message'] = 'Voucher created successfully in TallyPrime'
+            else:
+                processing_steps['voucher_creation']['status'] = 'failed'
+                processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {result.get("error", "Unknown error")}'
         
         # Save results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
