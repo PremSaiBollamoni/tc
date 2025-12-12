@@ -14,21 +14,32 @@ from datetime import datetime
 import traceback
 
 # Import our processing modules
-from config import validate_config, get_config
-from invoice_processor import InvoiceProcessor
-from complete_working_solution import CompleteTallyIntegration
+try:
+    from config import validate_config, get_config
+    from invoice_processor import InvoiceProcessor
+    from complete_working_solution import CompleteTallyIntegration
+except ImportError as e:
+    print(f"Import error: {e}")
+    # Create dummy functions for testing
+    def validate_config():
+        return {'deepinfra_token': os.environ.get('DEEPINFRA_TOKEN', ''), 'tally_host': 'localhost', 'tally_port': '9000'}
+    def get_config():
+        return validate_config()
 
 app = Flask(__name__)
 app.secret_key = 'invoice_processing_secret_key_2024'
 
 # Configuration
-UPLOAD_FOLDER = 'uploads'
-RESULTS_FOLDER = 'results'
+UPLOAD_FOLDER = '/tmp/uploads'
+RESULTS_FOLDER = '/tmp/results'
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
 
-# Create directories
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(RESULTS_FOLDER, exist_ok=True)
+# Create directories in /tmp (writable in serverless)
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(RESULTS_FOLDER, exist_ok=True)
+except:
+    pass  # Ignore errors in serverless environment
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -156,12 +167,15 @@ def process_invoice_api(file_path):
 @app.route('/')
 def index():
     """Main page"""
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        return f"<h1>Invoice Processing App</h1><p>Status: Running</p><p>Error: {str(e)}</p>"
 
 @app.route('/debug')
 def debug():
-    """Debug upload page"""
-    return send_file('debug_upload.html')
+    """Debug endpoint"""
+    return jsonify({'status': 'App is running', 'timestamp': datetime.now().isoformat()})
 
 @app.route('/upload', methods=['POST'])
 def upload_file():

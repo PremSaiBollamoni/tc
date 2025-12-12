@@ -18,6 +18,7 @@ Netlify only hosts static websites (HTML/CSS/JS). Your app is a Flask Python bac
    - Value: `sGnexJYRzOzcMH3x2Rzg9CusBH11poeO`
    - Environment: Production, Preview, Development (select all)
 7. **Deploy**: Click Deploy!
+8. **If it crashes**: Go to Functions tab in Vercel dashboard to see error logs
 
 ## Alternative: Railway (Also FREE)
 
