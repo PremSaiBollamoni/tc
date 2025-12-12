@@ -40,11 +40,9 @@ function handleFileSelect(files) {
             continue;
         }
         
-        // Validate file size (5MB limit for PDFs, 10MB for images)
-        const sizeLimit = file.type === 'application/pdf' ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
-        if (file.size > sizeLimit) {
-            const limitText = file.type === 'application/pdf' ? '5MB' : '10MB';
-            showAlert('warning', `Skipped ${file.name}: File too large (>${limitText}). PDFs have stricter limits on cloud deployment.`);
+        // Validate file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            showAlert('warning', 'Skipped ' + file.name + ': File too large (>10MB)');
             continue;
         }
         
