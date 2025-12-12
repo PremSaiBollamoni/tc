@@ -129,8 +129,8 @@ class InvoiceProcessor:
             page = doc.load_page(page_num)
             pix = page.get_pixmap()
             
-            # Save page as temporary image
-            temp_image_path = f"temp_page_{page_num}.png"
+            # Save page as temporary image in /tmp (writable in serverless)
+            temp_image_path = f"/tmp/temp_page_{page_num}.png"
             pix.save(temp_image_path)
             
             try:
@@ -138,9 +138,12 @@ class InvoiceProcessor:
                 page_result = self.process_image_with_llm(temp_image_path)
                 results.append(page_result)
             finally:
-                # Clean up temp file
-                if os.path.exists(temp_image_path):
-                    os.remove(temp_image_path)
+                # Clean up temp file (ignore errors in serverless)
+                try:
+                    if os.path.exists(temp_image_path):
+                        os.remove(temp_image_path)
+                except:
+                    pass  # Ignore cleanup errors in serverless environment
         
         doc.close()
         return results
