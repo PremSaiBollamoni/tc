@@ -108,39 +108,65 @@ def process_invoice_api(file_path):
                 processing_steps['tally_connection']['status'] = 'failed'
                 processing_steps['tally_connection']['message'] = f'Cannot connect to TallyPrime: {str(e)}'
         
-        # Step 3: TallyPrime Integration - Always try, show real errors
+        # Step 3: TallyPrime Integration - Handle cloud vs local deployment
         processing_steps['ledger_creation']['status'] = 'processing'
         processing_steps['voucher_creation']['status'] = 'processing'
         
-        try:
-            tally = CompleteTallyIntegration()
-            result = tally.import_complete_invoice(merged_json)
-            
-            # Update ledger creation status
-            processing_steps['ledger_creation']['status'] = 'success'
-            processing_steps['ledger_creation']['message'] = 'Ledgers created successfully'
-            processing_steps['ledger_creation']['data'] = {
-                'vendor_ledger': merged_json.get('vendor_name'),
-                'item_ledgers': [item.get('description') for item in merged_json.get('line_items', [])]
-            }
-            
-            # Update voucher creation status
-            if result['success']:
-                processing_steps['voucher_creation']['status'] = 'success'
-                processing_steps['voucher_creation']['message'] = 'Voucher created successfully in TallyPrime'
-            else:
-                processing_steps['voucher_creation']['status'] = 'failed'
-                processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {result.get("error", "Unknown error")}'
+        tally = CompleteTallyIntegration()
+        
+        if config['tally_host'] == 'localhost':
+            # Cloud deployment - just generate XML, show connection errors
+            try:
+                result = tally.generate_xml_only(merged_json)
                 
-        except Exception as e:
-            # Show actual errors (like date format, connection issues, etc.)
-            processing_steps['ledger_creation']['status'] = 'failed'
-            processing_steps['ledger_creation']['message'] = f'Ledger creation failed: {str(e)}'
-            
-            processing_steps['voucher_creation']['status'] = 'failed'
-            processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {str(e)}'
-            
-            result = {'success': False, 'xml_file': None, 'error': str(e)}
+                processing_steps['ledger_creation']['status'] = 'success'
+                processing_steps['ledger_creation']['message'] = 'XML generated (ledgers would be created on import)'
+                processing_steps['ledger_creation']['data'] = {
+                    'vendor_ledger': merged_json.get('vendor_name'),
+                    'item_ledgers': [item.get('description') for item in merged_json.get('line_items', [])]
+                }
+                
+                processing_steps['voucher_creation']['status'] = 'success'
+                processing_steps['voucher_creation']['message'] = 'XML generated successfully (download to import to TallyPrime)'
+                
+            except Exception as e:
+                processing_steps['ledger_creation']['status'] = 'failed'
+                processing_steps['ledger_creation']['message'] = f'XML generation failed: {str(e)}'
+                
+                processing_steps['voucher_creation']['status'] = 'failed'
+                processing_steps['voucher_creation']['message'] = f'XML generation failed: {str(e)}'
+                
+                result = {'success': False, 'xml_file': None, 'xml_content': None, 'error': str(e)}
+        else:
+            # Local deployment - try actual TallyPrime integration
+            try:
+                result = tally.import_complete_invoice(merged_json)
+                
+                # Update ledger creation status
+                processing_steps['ledger_creation']['status'] = 'success'
+                processing_steps['ledger_creation']['message'] = 'Ledgers created successfully'
+                processing_steps['ledger_creation']['data'] = {
+                    'vendor_ledger': merged_json.get('vendor_name'),
+                    'item_ledgers': [item.get('description') for item in merged_json.get('line_items', [])]
+                }
+                
+                # Update voucher creation status
+                if result['success']:
+                    processing_steps['voucher_creation']['status'] = 'success'
+                    processing_steps['voucher_creation']['message'] = 'Voucher created successfully in TallyPrime'
+                else:
+                    processing_steps['voucher_creation']['status'] = 'failed'
+                    processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {result.get("error", "Unknown error")}'
+                    
+            except Exception as e:
+                # Show actual errors (like date format, connection issues, etc.)
+                processing_steps['ledger_creation']['status'] = 'failed'
+                processing_steps['ledger_creation']['message'] = f'Ledger creation failed: {str(e)}'
+                
+                processing_steps['voucher_creation']['status'] = 'failed'
+                processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {str(e)}'
+                
+                result = {'success': False, 'xml_file': None, 'error': str(e)}
         
         # Save results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -156,9 +182,12 @@ def process_invoice_api(file_path):
             if result.get('xml_file') and os.path.exists(result['xml_file']):
                 import shutil
                 shutil.copy(result['xml_file'], xml_file)
+            elif result.get('xml_content'):
+                # Use XML content if file wasn't saved
+                with open(xml_file, 'w', encoding='utf-8') as f:
+                    f.write(result['xml_content'])
             else:
                 # Generate XML even if TallyPrime connection failed
-                tally = CompleteTallyIntegration()
                 xml_content = tally.create_voucher(merged_json)
                 with open(xml_file, 'w', encoding='utf-8') as f:
                     f.write(xml_content)
@@ -226,14 +255,50 @@ def upload_file():
         
         for file in files:
             if file and file.filename != '' and allowed_file(file.filename):
+                # Check file size limits for serverless deployment
+                file.seek(0, 2)  # Seek to end to get size
+                file_size = file.tell()
+                file.seek(0)  # Reset to beginning
+                
+                # Stricter limits for PDFs in serverless environment
+                if file.filename.lower().endswith('.pdf') and file_size > 5 * 1024 * 1024:  # 5MB for PDFs
+                    results.append({
+                        'success': False,
+                        'error': f'PDF file too large ({file_size / (1024*1024):.1f}MB). Maximum 5MB for PDFs in cloud deployment.',
+                        'original_filename': file.filename
+                    })
+                    continue
+                elif file_size > 10 * 1024 * 1024:  # 10MB for images
+                    results.append({
+                        'success': False,
+                        'error': f'File too large ({file_size / (1024*1024):.1f}MB). Maximum 10MB.',
+                        'original_filename': file.filename
+                    })
+                    continue
+                
                 filename = secure_filename(file.filename)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = f"{timestamp}_{filename}"
                 file_path = os.path.join(UPLOAD_FOLDER, filename)
                 file.save(file_path)
                 
-                # Process the invoice
-                result = process_invoice_api(file_path)
+                # Process the invoice with timeout for serverless
+                try:
+                    result = process_invoice_api(file_path)
+                except Exception as e:
+                    if "timeout" in str(e).lower() or "403" in str(e):
+                        result = {
+                            'success': False,
+                            'error': 'Processing timeout - PDF too complex for cloud deployment. Try smaller PDFs or convert to images.',
+                            'processing_steps': {
+                                'ai_processing': {'status': 'failed', 'message': 'Timeout in serverless environment'},
+                                'tally_connection': {'status': 'skipped', 'message': 'Skipped due to previous error'},
+                                'ledger_creation': {'status': 'skipped', 'message': 'Skipped due to previous error'},
+                                'voucher_creation': {'status': 'skipped', 'message': 'Skipped due to previous error'}
+                            }
+                        }
+                    else:
+                        raise
                 
                 # Add file info to result
                 result['uploaded_file'] = filename

@@ -186,6 +186,38 @@ class CompleteTallyIntegration:
         
         return xml
     
+    def generate_xml_only(self, invoice_data: dict) -> dict:
+        """Generate XML without trying to connect to TallyPrime - for cloud deployment"""
+        result = {
+            'success': True,
+            'xml_content': None,
+            'xml_file': None,
+            'error': None,
+            'voucher_number': invoice_data.get('invoice_number', 'Unknown')
+        }
+        
+        try:
+            # Just create the XML content
+            xml_content = self.create_voucher(invoice_data)
+            result['xml_content'] = xml_content
+            
+            # Try to save to /tmp if possible
+            try:
+                safe_name = re.sub(r'[^\w\-]', '_', str(result['voucher_number']))
+                xml_filename = f"/tmp/complete_{safe_name}.xml"
+                with open(xml_filename, 'w', encoding='utf-8') as f:
+                    f.write(xml_content)
+                result['xml_file'] = xml_filename
+            except:
+                # File saving failed, but we still have the content
+                pass
+                
+        except Exception as e:
+            result['success'] = False
+            result['error'] = f"XML generation failed: {str(e)}"
+        
+        return result
+    
     def import_complete_invoice(self, invoice_data: dict) -> dict:
         """Complete import process: ledgers first, then voucher"""
         
@@ -205,13 +237,19 @@ class CompleteTallyIntegration:
             # Step 2: Create voucher XML
             xml_content = self.create_voucher(invoice_data)
             
-            # Step 3: Save XML
+            # Step 3: Save XML to /tmp (writable in serverless)
             safe_name = re.sub(r'[^\w\-]', '_', str(result['voucher_number']))
-            xml_filename = f"complete_{safe_name}.xml"
+            xml_filename = f"/tmp/complete_{safe_name}.xml"
             
-            with open(xml_filename, 'w', encoding='utf-8') as f:
-                f.write(xml_content)
-            result['xml_file'] = xml_filename
+            try:
+                with open(xml_filename, 'w', encoding='utf-8') as f:
+                    f.write(xml_content)
+                result['xml_file'] = xml_filename
+            except Exception as e:
+                # If file writing fails, just return the XML content
+                result['xml_content'] = xml_content
+                result['xml_file'] = None
+                print(f"   ⚠️  Could not save XML file: {str(e)}")
             
             # Step 4: Import voucher
             print(f"   📤 Importing voucher to TallyPrime...")
