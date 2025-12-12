@@ -205,9 +205,9 @@ class CompleteTallyIntegration:
             # Step 2: Create voucher XML
             xml_content = self.create_voucher(invoice_data)
             
-            # Step 3: Save XML
+            # Step 3: Save XML in /tmp/
             safe_name = re.sub(r'[^\w\-]', '_', str(result['voucher_number']))
-            xml_filename = f"complete_{safe_name}.xml"
+            xml_filename = f"/tmp/complete_{safe_name}.xml"
             
             with open(xml_filename, 'w', encoding='utf-8') as f:
                 f.write(xml_content)
@@ -269,8 +269,8 @@ def complete_workflow(invoice_file: str) -> dict:
         print(f"   🏢 Vendor: {merged_json.get('vendor_name')}")
         print(f"   💰 Amount: ₹{merged_json.get('total_amount')}")
         
-        # Save JSON
-        json_file = f"{Path(invoice_file).stem}_complete.json"
+        # Save JSON in /tmp/
+        json_file = f"/tmp/{Path(invoice_file).stem}_complete.json"
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(merged_json, f, indent=2, ensure_ascii=False)
         

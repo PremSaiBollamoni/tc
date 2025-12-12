@@ -129,8 +129,8 @@ class InvoiceProcessor:
             page = doc.load_page(page_num)
             pix = page.get_pixmap()
             
-            # Save page as temporary image
-            temp_image_path = f"temp_page_{page_num}.png"
+            # Save page as temporary image in /tmp/
+            temp_image_path = f"/tmp/temp_page_{page_num}.png"
             pix.save(temp_image_path)
             
             try:
@@ -374,8 +374,8 @@ class InvoiceProcessor:
         # Step 2: Merge JSON data (for multi-page PDFs)
         merged_json = self.merge_json_data(json_results)
         
-        # Save intermediate JSON
-        json_output = input_file.replace('.', '_extracted.') + '.json'
+        # Save intermediate JSON in /tmp/
+        json_output = f"/tmp/{Path(input_file).stem}_extracted.json"
         with open(json_output, 'w') as f:
             json.dump(merged_json, f, indent=2)
         logger.info(f"Merged JSON saved to {json_output}")
@@ -383,9 +383,9 @@ class InvoiceProcessor:
         # Step 3: Convert to Tally XML
         xml_content = self.json_to_tally_xml(merged_json)
         
-        # Step 4: Save XML
+        # Step 4: Save XML in /tmp/
         if not output_xml:
-            output_xml = input_file.replace('.', '_tally.') + '.xml'
+            output_xml = f"/tmp/{Path(input_file).stem}_tally.xml"
         
         self.save_xml(xml_content, output_xml)
         

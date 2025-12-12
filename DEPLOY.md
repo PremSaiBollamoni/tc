@@ -20,6 +20,16 @@ Netlify only hosts static websites (HTML/CSS/JS). Your app is a Flask Python bac
 7. **Deploy**: Click Deploy!
 8. **If it crashes**: Go to Functions tab in Vercel dashboard to see error logs
 
+## ✅ FIXED: Serverless File System Issues
+
+The app now uses `/tmp/` directory for all file operations, which is writable in serverless environments.
+
+**Fixed Issues:**
+- ✅ PDF page extraction now saves to `/tmp/temp_page_X.png`
+- ✅ XML files saved to `/tmp/complete_XXX.xml`
+- ✅ JSON files saved to `/tmp/XXX_complete.json`
+- ✅ All temporary files use serverless-compatible paths
+
 ## Alternative: Railway (Also FREE)
 
 1. Go to [railway.app](https://railway.app)
