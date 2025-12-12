@@ -108,34 +108,11 @@ def process_invoice_api(file_path):
                 processing_steps['tally_connection']['status'] = 'failed'
                 processing_steps['tally_connection']['message'] = f'Cannot connect to TallyPrime: {str(e)}'
         
-        # Step 3: TallyPrime Integration
-        if config['tally_host'] == 'localhost':
-            # Skip TallyPrime integration in cloud deployment
-            processing_steps['ledger_creation']['status'] = 'skipped'
-            processing_steps['ledger_creation']['message'] = 'Skipped - Cloud deployment (download XML to import locally)'
-            
-            processing_steps['voucher_creation']['status'] = 'skipped'
-            processing_steps['voucher_creation']['message'] = 'Skipped - Cloud deployment (download XML to import locally)'
-            
-            # Generate XML for download
-            try:
-                tally = CompleteTallyIntegration()
-                xml_content = tally.create_voucher(merged_json)
-                
-                # Save XML for download
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                xml_file = os.path.join(RESULTS_FOLDER, f"voucher_{timestamp}.xml")
-                with open(xml_file, 'w', encoding='utf-8') as f:
-                    f.write(xml_content)
-                
-                result = {'success': True, 'xml_file': xml_file, 'error': None}
-            except Exception as e:
-                result = {'success': False, 'xml_file': None, 'error': str(e)}
-        else:
-            # Try actual TallyPrime integration for non-localhost
-            processing_steps['ledger_creation']['status'] = 'processing'
-            processing_steps['voucher_creation']['status'] = 'processing'
-            
+        # Step 3: TallyPrime Integration - Always try, show real errors
+        processing_steps['ledger_creation']['status'] = 'processing'
+        processing_steps['voucher_creation']['status'] = 'processing'
+        
+        try:
             tally = CompleteTallyIntegration()
             result = tally.import_complete_invoice(merged_json)
             
@@ -154,6 +131,16 @@ def process_invoice_api(file_path):
             else:
                 processing_steps['voucher_creation']['status'] = 'failed'
                 processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {result.get("error", "Unknown error")}'
+                
+        except Exception as e:
+            # Show actual errors (like date format, connection issues, etc.)
+            processing_steps['ledger_creation']['status'] = 'failed'
+            processing_steps['ledger_creation']['message'] = f'Ledger creation failed: {str(e)}'
+            
+            processing_steps['voucher_creation']['status'] = 'failed'
+            processing_steps['voucher_creation']['message'] = f'Voucher creation failed: {str(e)}'
+            
+            result = {'success': False, 'xml_file': None, 'error': str(e)}
         
         # Save results
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -164,10 +151,20 @@ def process_invoice_api(file_path):
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(merged_json, f, indent=2, ensure_ascii=False)
         
-        # Save XML if available
-        if result.get('xml_file') and os.path.exists(result['xml_file']):
-            import shutil
-            shutil.copy(result['xml_file'], xml_file)
+        # Always generate XML for download, even if TallyPrime connection fails
+        try:
+            if result.get('xml_file') and os.path.exists(result['xml_file']):
+                import shutil
+                shutil.copy(result['xml_file'], xml_file)
+            else:
+                # Generate XML even if TallyPrime connection failed
+                tally = CompleteTallyIntegration()
+                xml_content = tally.create_voucher(merged_json)
+                with open(xml_file, 'w', encoding='utf-8') as f:
+                    f.write(xml_content)
+        except Exception as e:
+            logger.error(f"XML generation error: {str(e)}")
+            xml_file = None
         
         return {
             'success': result['success'],
